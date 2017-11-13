@@ -1,0 +1,6 @@
+D:\Projects\C#\Chat\Server\bin\Debug\Server.exe.config
+D:\Projects\C#\Chat\Server\bin\Debug\Server.exe
+D:\Projects\C#\Chat\Server\bin\Debug\Server.pdb
+D:\Projects\C#\Chat\Server\obj\Debug\Server.csprojResolveAssemblyReference.cache
+D:\Projects\C#\Chat\Server\obj\Debug\Server.exe
+D:\Projects\C#\Chat\Server\obj\Debug\Server.pdb
