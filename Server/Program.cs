@@ -11,16 +11,31 @@ namespace Server
 {
     class Program
     {
-        static int port = 5000;
+        static int port;
+        static string ip;
         public static List<ClientObject> Clients = new List<ClientObject>();
 
         static void Main(string[] args)
         {
+            begin:
+            Console.WriteLine("Введите ваш локальный IP");
+            ip = Console.ReadLine();
+            Console.WriteLine("Введите порт");
+            port = int.Parse(Console.ReadLine());
+
             TcpListener server = null;
             try
             {
-                IPAddress localAddr = IPAddress.Parse("192.168.1.35");
-                server = new TcpListener(localAddr, port);
+                try
+                {
+                    IPAddress localAddr = IPAddress.Parse(ip);
+                    server = new TcpListener(localAddr, port);
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    goto begin;
+                }
 
                 server.Start();
 
@@ -47,13 +62,26 @@ namespace Server
             {
                 Console.WriteLine(e.Message);
                 Console.ReadKey();
+                goto begin;
             }
             finally
             {
                 if (server != null)
                     server.Stop();
-
                 Console.ReadKey();
+            }
+        }
+
+        void CheckActivity ()
+        {
+            foreach(ClientObject c in Clients)
+            {
+                if (!c.client.Connected)
+                {
+                    Clients.Remove(c);
+                    Console.WriteLine("Удалил неактивное соединение");
+                    Thread.Sleep(5000);
+                }
             }
         }
     }
@@ -81,6 +109,8 @@ namespace Server
             if (thr.IsAlive)
             {
                 thr.Abort();
+                client.Close();
+                client = null;
             }
         }
 
@@ -93,24 +123,31 @@ namespace Server
                 byte[] data = new byte[64]; // буфер для получаемых данных
                 while (true)
                 {
-                    // получаем сообщение
-                    StringBuilder builder = new StringBuilder();
-                    int bytes = 0;
-                    do
+                    if (client.Connected)
                     {
-                        bytes = stream.Read(data, 0, data.Length);
-                        builder.Append(Encoding.UTF8.GetString(data, 0, bytes));
+                        // получаем сообщение                 
+                        StringBuilder builder = new StringBuilder();
+                        int bytes = 0;
+                        do
+                        {
+                            bytes = stream.Read(data, 0, data.Length);
+                            builder.Append(Encoding.UTF8.GetString(data, 0, bytes));
+                        }
+                        while (stream.DataAvailable);
+                        Console.WriteLine("Здесь происходит какое-то говно");
+                        string message = builder.ToString();
+                        Console.WriteLine(message);
+                        // Рассылаем сообщение всем клиентам
+                        foreach (ClientObject c in Program.Clients)
+                        {
+                            NetworkStream str = c.client.GetStream();
+                            data = Encoding.UTF8.GetBytes(builder.ToString());
+                            str.Write(data, 0, data.Length);
+                        }
                     }
-                    while (stream.DataAvailable);
-
-                    string message = builder.ToString();
-                    Console.WriteLine(message);
-                    // Рассылаем сообщение всем клиентам
-                    foreach(ClientObject c in Program.Clients)
+                    else
                     {
-                        NetworkStream str = c.client.GetStream();
-                        data = Encoding.UTF8.GetBytes(builder.ToString());
-                        str.Write(data, 0, data.Length);
+                        break;
                     }
                 }
             }

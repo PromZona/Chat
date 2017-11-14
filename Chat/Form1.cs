@@ -12,8 +12,8 @@ namespace Chat
 {
     public partial class Form1 : Form
     {
-        private const int port = 5000;
-        private const string server = "93.80.69.26";
+        private int port;
+        private string serverip;
         Thread PassiveWaiter = null;
         TcpClient client;
 
@@ -24,22 +24,7 @@ namespace Chat
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            try
-            {
-                client = new TcpClient();
-                client.Connect(server, port);
-                PassiveWaiter = new Thread(new ThreadStart(() => AcceptMessage(client)));
-                PassiveWaiter.Start();
-            }
-            catch (SocketException k)
-            {
-                Chat_TB.Text = k.ToString();
-            }
-            catch (Exception k)
-            {
-                Chat_TB.Text = k.ToString();
-            }
-
+            
         }
         
 
@@ -77,7 +62,7 @@ namespace Chat
 
         private void Send_Button_Click(object sender, EventArgs e)
         {
-            if (NickName_TB.Text != "" && Message_TB.Text != "")
+            if (NickName_TB.Text != "" && Message_TB.Text != "" && client != null && client.Connected)
             {
                 string response = NickName_TB.Text + ": " + Message_TB.Text;
                 byte[] data = Encoding.UTF8.GetBytes(response);
@@ -94,14 +79,14 @@ namespace Chat
             }
             else
             {
-                MessageBox.Show("Вы не ввели никнейм или сообщение");
+                MessageBox.Show("Вы не ввели никнейм или сообщение или вы не подключены к серверу");
             }
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (PassiveWaiter != null) if(PassiveWaiter.IsAlive)PassiveWaiter.Abort();        
-            client.Close();
+            if (client != null && client.Connected)client.Close();
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
@@ -134,6 +119,55 @@ namespace Chat
         private void Send_Button_KeyUp(object sender, KeyEventArgs e)
         {
             
+        }
+
+        private void Connect_Button_Click(object sender, EventArgs e)
+        {
+            if (IP_TB.Text != "" && Port_TB.Text != "")
+            {
+                serverip = IP_TB.Text;
+                port = int.Parse(Port_TB.Text);
+                try
+                {
+                    client = new TcpClient();
+                    client.Connect(serverip, port);
+                    ConnectionStatus_label.Text = "Сервер подключен";
+                    ConnectionStatus_label.ForeColor = System.Drawing.Color.Green;
+                    PassiveWaiter = new Thread(new ThreadStart(() => AcceptMessage(client)));
+                    PassiveWaiter.Start();
+                }
+                catch (SocketException k)
+                {
+                    Chat_TB.Text = k.ToString();
+                    ConnectionStatus_label.Text = "Проблемы";
+                    ConnectionStatus_label.ForeColor = System.Drawing.Color.Red;
+                }
+                catch (Exception k)
+                {
+                    Chat_TB.Text = k.ToString();
+                    ConnectionStatus_label.Text = "Проблемы";
+                    ConnectionStatus_label.ForeColor = System.Drawing.Color.Red;
+                }
+            }
+            else
+            {
+                MessageBox.Show("Заполните поля <Port> и <IP>");
+            }
+        }
+
+        private void DisConnect_button_Click(object sender, EventArgs e)
+        {
+            if(client != null && client.Connected)
+            {
+                PassiveWaiter.Abort();
+                client.Close();
+                ConnectionStatus_label.Text = "Соединение отключено";
+                ConnectionStatus_label.ForeColor = System.Drawing.Color.Red;
+            }
+            else
+            {
+                MessageBox.Show("Вы не подключены или у вас проблемы =) ");
+            }
         }
     }
 }
